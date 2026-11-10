@@ -1,0 +1,29 @@
+{
+  "name": "internet-technologien-server",
+  "version": "1.0.0",
+  "description": "REST-API (Node.js + Express + SQLite) für das Projekt im Fach Internet-Technologien",
+  "private": true,
+  "type": "module",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/server.js",
+    "dev": "node --watch --env-file-if-exists=.env src/server.js",
+    "test": "node --test",
+    "setup": "node scripts/setup.js",
+    "reset-password": "node --env-file-if-exists=.env scripts/reset-password.js"
+  },
+  "author": "Daniel Shapiro",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.4",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^10.4.1"
+  }
+}
