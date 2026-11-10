@@ -68,7 +68,7 @@ Es gibt keine Analyse-Tools, keine Werbung und keine eingebundenen Inhalte von D
 
 ## Kontaktformular
 
-Wenn du mir über das Formular schreibst, werden Name, E-Mail-Adresse, Betreff und Nachricht gespeichert, damit ich antworten kann (Art. 6 Abs. 1 lit. a DSGVO, deine Einwilligung). Die Daten werden verschlüsselt (AES-256) in der Datenbank abgelegt, nicht weitergegeben und spätestens nach 180 Tagen automatisch gelöscht. Du kannst deine Einwilligung jederzeit widerrufen und die Löschung verlangen – eine kurze Nachricht genügt.
+Wenn du mir über das Formular schreibst, werden Name, E-Mail-Adresse, Betreff und Nachricht gespeichert, damit ich antworten kann (Art. 6 Abs. 1 lit. a DSGVO, deine Einwilligung). Die Daten werden verschlüsselt (AES-256) in der Datenbank abgelegt und spätestens nach 180 Tagen automatisch gelöscht. Außerdem wird mir deine Nachricht per E-Mail an mein Postfach bei Microsoft Outlook.com weitergeleitet, die Übertragung ist dabei verschlüsselt (TLS). An andere wird nichts weitergegeben. Du kannst deine Einwilligung jederzeit widerrufen und die Löschung verlangen – eine kurze Nachricht genügt.
 
 ## Server-Logs
 

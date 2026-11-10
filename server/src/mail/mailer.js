@@ -1,6 +1,7 @@
-// Mail an mich wenn jemand das Kontaktformular abschickt (mit Nodemailer)
-// in der Mail steht normalerweise nur dass es eine neue Nachricht gibt, nicht der Inhalt
-// (kann man mit MAIL_INCLUDE_CONTENT=true ändern)
+// schickt mir jede Nachricht vom Kontaktformular per Mail (mit Nodemailer)
+// - Verbindung zum Mailserver immer verschlüsselt (TLS 1.2 oder neuer, Zertifikat wird geprüft)
+// - nur Text, kein HTML, damit niemand was in die Mail einbauen kann
+// - antworten geht direkt an den Absender (Reply-To)
 // ohne SMTP Daten wird ein Ethereal Testkonto benutzt, der Link zur Mail steht dann in der Konsole
 import nodemailer from 'nodemailer';
 import { config } from '../config.js';
@@ -24,10 +25,14 @@ async function createTransporter() {
     return nodemailer.createTransport({
       host,
       port,
-      secure,
-      requireTLS: !secure, // nie unverschlüsselt senden
-      tls: { minVersion: 'TLSv1.2' },
+      secure, // Port 465: gleich verschlüsselt
+      requireTLS: !secure, // Port 587: STARTTLS ist Pflicht, sonst wird nicht gesendet
+      tls: { minVersion: 'TLSv1.2', rejectUnauthorized: true },
       auth: user ? { user, pass } : undefined,
+      // nicht ewig warten wenn der Mailserver hängt
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 20_000,
     });
   }
 
@@ -41,62 +46,103 @@ async function createTransporter() {
   });
 }
 
-function escapeHtml(text) {
-  return String(text)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
+// Zeilenumbrüche und Steuerzeichen raus, damit keiner eigene Header einschleusen kann
+export function cleanHeader(value, maxLength = 150) {
+  return String(value)
+    .replace(/[\u0000-\u001f\u007f]+/g, ' ')
+    .trim()
+    .slice(0, maxLength);
 }
 
-function buildMail(msg) {
+// baut die Mail zusammen (nur Text)
+export function buildMail(msg) {
   const adminUrl = `${config.publicUrl}/admin/nachrichten`;
+  const name = cleanHeader(msg.name, 100);
+  const email = cleanHeader(msg.email, 254);
 
   if (!config.mail.includeContent) {
     return {
       subject: 'Neue Nachricht über das Kontaktformular',
-      text:
-        'Über das Kontaktformular ist eine neue Nachricht eingegangen.\n\n' +
-        `Lesen kannst du sie im Admin-Bereich:\n${adminUrl}\n`,
-      html:
-        '<p>Über das Kontaktformular ist eine neue Nachricht eingegangen.</p>' +
-        `<p><a href="${escapeHtml(adminUrl)}">Im Admin-Bereich lesen</a></p>`,
+      text: `Es ist eine neue Nachricht über das Kontaktformular gekommen.\n\nLesen im Admin Bereich:\n${adminUrl}\n`,
     };
   }
 
   return {
-    subject: `Neue Kontaktanfrage: ${msg.subject}`,
-    replyTo: { name: msg.name, address: msg.email },
-    text: `Von: ${msg.name} <${msg.email}>\nBetreff: ${msg.subject}\n\n${msg.message}\n\n${adminUrl}\n`,
-    html: `
-      <p><strong>Von:</strong> ${escapeHtml(msg.name)} &lt;${escapeHtml(msg.email)}&gt;<br>
-         <strong>Betreff:</strong> ${escapeHtml(msg.subject)}</p>
-      <p style="white-space:pre-wrap">${escapeHtml(msg.message)}</p>
-      <p><a href="${escapeHtml(adminUrl)}">Im Admin-Bereich öffnen</a></p>
-    `,
+    subject: `Kontaktformular: ${cleanHeader(msg.subject)}`,
+    replyTo: { name, address: email },
+    text:
+      `Von:     ${name} <${email}>\n` +
+      `Betreff: ${cleanHeader(msg.subject)}\n` +
+      `Datum:   ${new Date().toLocaleString('de-DE', { timeZone: 'Europe/Berlin' })}\n` +
+      `\n${msg.message}\n\n` +
+      `--\nZum Antworten einfach auf diese Mail antworten.\nAdmin Bereich: ${adminUrl}\n`,
   };
 }
 
-// Benachrichtigung schicken. Wenn das schiefgeht wird nur geloggt,
-// die Nachricht ist ja schon gespeichert
-export async function sendNewMessageNotification(msg) {
+// Mails pro Stunde zählen (gegen Spam von vielen verschiedenen IPs)
+let sentTimes = [];
+function underHourlyLimit() {
+  const oneHourAgo = Date.now() - 60 * 60 * 1000;
+  sentTimes = sentTimes.filter((t) => t > oneHourAgo);
+  return sentTimes.length < config.mail.maxPerHour;
+}
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+// nach einem Fehler noch 2x probieren (nach 10 Sekunden und nach 1 Minute)
+const RETRY_DELAYS = [10_000, 60_000];
+
+// Mail verschicken. Wenn das schiefgeht wird nur geloggt,
+// die Nachricht ist ja schon gespeichert und steht im Admin Bereich
+export async function sendNewMessageNotification(msg, { retryDelays = RETRY_DELAYS } = {}) {
   if (config.mail.disabled) return;
 
-  try {
-    // bei Ethereal ist die Adresse egal
-    const to = config.mail.to || config.mail.user || (!config.mail.host ? 'test@example.com' : '');
-    if (!to) {
-      console.warn('[mail] MAIL_TO ist nicht gesetzt – keine Benachrichtigung verschickt.');
+  // bei Ethereal ist die Adresse egal
+  const to = config.mail.to || (!config.mail.host ? 'test@example.com' : '');
+  if (!to) {
+    console.warn('[mail] MAIL_TO ist nicht gesetzt – keine Mail verschickt.');
+    return;
+  }
+  if (!underHourlyLimit()) {
+    console.warn('[mail] Zu viele Mails in der letzten Stunde – Nachricht nur gespeichert.');
+    return;
+  }
+  sentTimes.push(Date.now());
+
+  const mail = {
+    from: config.mail.from,
+    to,
+    ...buildMail(msg),
+    headers: {
+      // keine Abwesenheitsnotizen an den Absender schicken
+      'Auto-Submitted': 'auto-generated',
+      'X-Auto-Response-Suppress': 'All',
+    },
+  };
+
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const transporter = await getTransporter();
+      const info = await transporter.sendMail(mail);
+      const preview = nodemailer.getTestMessageUrl(info);
+      console.log(`[mail] Nachricht weitergeleitet.${preview ? ' Vorschau: ' + preview : ''}`);
       return;
+    } catch (err) {
+      // nur die Fehlermeldung loggen, keine Daten aus der Nachricht
+      console.error(`[mail] Versand fehlgeschlagen (Versuch ${attempt + 1}): ${err.message}`);
+      if (attempt >= retryDelays.length) return;
+      await wait(retryDelays[attempt]);
     }
+  }
+}
 
+// beim Start einmal testen ob die Anmeldung beim Mailserver klappt
+export async function checkMailConnection() {
+  if (config.mail.disabled || !config.mail.host) return;
+  try {
     const transporter = await getTransporter();
-    const info = await transporter.sendMail({ from: config.mail.from, to, ...buildMail(msg) });
-
-    const preview = nodemailer.getTestMessageUrl(info);
-    console.log(`[mail] Benachrichtigung verschickt.${preview ? ' Vorschau: ' + preview : ''}`);
+    await transporter.verify();
+    console.log(`[mail] Verbindung zu ${config.mail.host} ok (verschlüsselt). Mails gehen an ${config.mail.to || '(MAIL_TO fehlt!)'}.`);
   } catch (err) {
-    console.error('[mail] Benachrichtigung konnte nicht verschickt werden:', err.message);
+    console.error(`[mail] Keine Verbindung zum Mailserver: ${err.message}`);
   }
 }

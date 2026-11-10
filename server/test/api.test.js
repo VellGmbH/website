@@ -371,3 +371,28 @@ test('Admin: Profilbild hochladen, prüfen und zurücksetzen', async () => {
   assert.equal((await s.request('DELETE', '/admin/avatar')).body.avatarVersion, null);
   assert.equal((await fetch(baseUrl + '/avatar')).status, 404);
 });
+
+// Mail
+
+test('Mail: ganze Nachricht als reiner Text, Antwort geht an den Absender', async () => {
+  const { buildMail } = await import('../src/mail/mailer.js');
+  const mail = buildMail({ name: 'Max', email: 'max@example.com', subject: 'Hallo', message: '<b>Hi</b>\nZeile 2' });
+
+  assert.equal(mail.subject, 'Kontaktformular: Hallo');
+  assert.deepEqual(mail.replyTo, { name: 'Max', address: 'max@example.com' });
+  assert.match(mail.text, /<b>Hi<\/b>\nZeile 2/);
+  assert.equal(mail.html, undefined, 'kein HTML');
+});
+
+test('Mail: keine Header über Zeilenumbrüche einschleusen', async () => {
+  const { buildMail, cleanHeader } = await import('../src/mail/mailer.js');
+  const mail = buildMail({
+    name: 'Max\r\nBcc: opfer@example.com',
+    email: 'max@example.com',
+    subject: 'Hallo\nBcc: opfer@example.com',
+    message: 'x',
+  });
+  assert.doesNotMatch(mail.subject, /[\r\n]/);
+  assert.doesNotMatch(mail.replyTo.name, /[\r\n]/);
+  assert.equal(cleanHeader('a'.repeat(500)).length, 150);
+});

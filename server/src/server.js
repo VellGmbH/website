@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { config } from './config.js';
 import { openDatabase, deleteExpiredMessages } from './db/database.js';
 import { createApp } from './app.js';
+import { checkMailConnection } from './mail/mailer.js';
 
 const db = openDatabase();
 
@@ -27,6 +28,7 @@ const server = useHttps
 server.listen(config.port, () => {
   const protocol = useHttps ? 'https' : 'http';
   console.log(`[server] läuft auf ${protocol}://localhost:${config.port}`);
+  void checkMailConnection();
 });
 
 // bei Strg+C sauber beenden

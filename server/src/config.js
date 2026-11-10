@@ -66,10 +66,13 @@ export const config = {
     secure: env.SMTP_SECURE === 'true',
     user: env.SMTP_USER || '',
     pass: env.SMTP_PASS || '',
-    from: env.MAIL_FROM || 'Website <no-reply@example.com>',
+    // Absender muss das SMTP Konto sein, sonst landet die Mail im Spam
+    from: env.MAIL_FROM || (env.SMTP_USER ? `Website <${env.SMTP_USER}>` : 'Website <no-reply@example.com>'),
     to: env.MAIL_TO || '',
-    // Nachrichtentext normalerweise nicht mitschicken, Mails sind ja nicht verschlüsselt
-    includeContent: env.MAIL_INCLUDE_CONTENT === 'true',
+    // ganze Nachricht mitschicken (mit false kommt nur ein Hinweis)
+    includeContent: env.MAIL_INCLUDE_CONTENT !== 'false',
+    // höchstens so viele Mails pro Stunde, falls jemand das Formular zuspammt
+    maxPerHour: Number(env.MAIL_MAX_PER_HOUR) || 30,
     disabled: env.MAIL_DISABLED === 'true',
   },
 };
