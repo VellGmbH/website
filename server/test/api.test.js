@@ -338,7 +338,10 @@ test('Admin: allgemeine Angaben ändern', async () => {
 
   const ok = await s.request('PUT', '/admin/settings', { name: 'Max', tagline: 'Hallo', githubUrl: '' });
   assert.equal(ok.status, 200);
-  assert.deepEqual((await anon.request('GET', '/site')).body, { name: 'Max', tagline: 'Hallo', githubUrl: null, avatarVersion: null });
+  const site = (await anon.request('GET', '/site')).body;
+  assert.equal(site.name, 'Max');
+  assert.equal(site.tagline, 'Hallo');
+  assert.equal(site.githubUrl, null);
 });
 
 test('Admin: Profilbild hochladen, prüfen und zurücksetzen', async () => {
@@ -402,4 +405,41 @@ test('Mail: neue Nachricht ist als "Mail noch offen" markiert', async () => {
   assert.equal(res.status, 201);
   const row = db.prepare('SELECT mail_sent FROM messages ORDER BY id DESC LIMIT 1').get();
   assert.equal(row.mail_sent, 0, 'Mail ist im Test abgeschaltet, also bleibt sie offen');
+});
+
+// SEO
+
+test('SEO: robots.txt sperrt Admin und API, sitemap.xml enthält alle öffentlichen Seiten', async () => {
+  const root = baseUrl.replace(/\/api$/, '');
+  const robots = await fetch(root + '/robots.txt');
+  const robotsText = await robots.text();
+  assert.match(robotsText, /Disallow: \/admin\//);
+  assert.match(robotsText, /Disallow: \/api\//);
+  assert.match(robotsText, /Sitemap: .*\/sitemap\.xml/);
+
+  const sitemap = await fetch(root + '/sitemap.xml');
+  assert.match(sitemap.headers.get('content-type'), /xml/);
+  const xml = await sitemap.text();
+  for (const path of ['/projekte', '/kontakt', '/impressum', '/datenschutz', '/projekte/1']) {
+    assert.ok(xml.includes(`${path}</loc>`), `${path} fehlt in der Sitemap`);
+  }
+  assert.ok(!xml.includes('/admin'));
+});
+
+test('SEO: Beschreibung pro Seite und Keywords sind änderbar, Längen werden geprüft', async () => {
+  const s = new Session();
+  await s.login();
+
+  const tooLong = await s.request('PUT', '/admin/pages/about', { title: 'x'.repeat(81), content: '', description: 'y'.repeat(201) });
+  assert.equal(tooLong.status, 400);
+  assert.ok(tooLong.body.details.title && tooLong.body.details.description);
+
+  const ok = await s.request('PUT', '/admin/pages/about', { title: 'Über mich', content: 'Hallo', description: 'Kurz und knapp' });
+  assert.equal(ok.body.description, 'Kurz und knapp');
+
+  const settings = await s.request('PUT', '/admin/settings', {
+    name: 'Daniel Shapiro', tagline: '', githubUrl: '', description: 'Seite', keywords: 'a, b',
+  });
+  assert.equal(settings.status, 200);
+  assert.equal(settings.body.keywords, 'a, b');
 });

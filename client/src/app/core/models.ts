@@ -46,17 +46,22 @@ export interface SiteSettings {
   name: string;
   tagline: string;
   githubUrl: string | null;
+  // für Suchmaschinen
+  description: string;
+  keywords: string;
   // null = Standardbild
   avatarVersion: string | null;
 }
 
-export type SiteSettingsInput = Pick<SiteSettings, 'name' | 'tagline'> & { githubUrl: string };
+export type SiteSettingsInput = Pick<SiteSettings, 'name' | 'tagline' | 'description' | 'keywords'> & { githubUrl: string };
 
 // Seite mit Text (Markdown)
 export interface Page {
   slug: string;
   title: string;
   content: string;
+  // meta description, max 200 Zeichen
+  description: string;
   updatedAt: string;
 }
 

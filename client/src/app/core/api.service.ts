@@ -75,7 +75,7 @@ export class ApiService {
     return this.http.get<AdminPage[]>(`${this.base}/admin/pages`);
   }
 
-  updatePage(slug: string, data: Pick<Page, 'title' | 'content'>): Observable<Page> {
+  updatePage(slug: string, data: Pick<Page, 'title' | 'content' | 'description'>): Observable<Page> {
     return this.http.put<Page>(`${this.base}/admin/pages/${encodeURIComponent(slug)}`, data);
   }
 

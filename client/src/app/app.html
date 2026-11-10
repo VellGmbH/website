@@ -2,7 +2,7 @@
   <aside class="sidebar">
     <div class="sidebar-inner">
       <a routerLink="/" class="profile">
-        <img [src]="site.avatarUrl()" alt="Profilbild" width="400" height="400" />
+        <img [src]="site.avatarUrl()" [alt]="'Profilbild von ' + site.settings().name" width="400" height="400" />
         <span>
           <span class="name">{{ site.settings().name }}</span>
           @if (site.settings().tagline) {

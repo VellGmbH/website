@@ -90,6 +90,7 @@ h2 {
 a {
   color: var(--link);
   text-decoration: none;
+  transition: color 0.15s linear;
 
   &:hover {
     text-decoration: underline;
@@ -255,4 +256,26 @@ th {
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+/* beim Drucken nur den Inhalt, ohne Seitenleiste und Buttons */
+@media print {
+  body {
+    background: #fff;
+    color: #000;
+  }
+  .sidebar,
+  .theme-toggle,
+  .edit-link,
+  button {
+    display: none !important;
+  }
+  .content {
+    padding: 0 !important;
+    max-width: none !important;
+  }
+  a {
+    color: #000;
+    text-decoration: underline;
+  }
 }

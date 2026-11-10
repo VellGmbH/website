@@ -74,6 +74,13 @@ const PUBLIC_PATHS: Record<string, string> = {
           </p>
         }
 
+        <p>
+          <label for="description">Beschreibung für Suchmaschinen</label>
+          <input id="description" type="text" formControlName="description" maxlength="200" />
+          <span class="muted small">{{ form.controls.description.value.length }} / 200 Zeichen – erscheint bei Google unter dem Titel</span>
+          <app-field-error [control]="form.controls.description" />
+        </p>
+
         @if (error()) {
           <p class="error" role="alert">{{ error() }}</p>
         }
@@ -133,8 +140,9 @@ export class AdminPages {
   private readonly selectedSlug = computed(() => this.selected()?.slug);
 
   protected readonly form = this.fb.group({
-    title: ['', [Validators.required, Validators.maxLength(120)]],
+    title: ['', [Validators.required, Validators.maxLength(80)]],
     content: ['', Validators.maxLength(50_000)],
+    description: ['', Validators.maxLength(200)],
   });
   protected readonly content = toSignal(this.form.controls.content.valueChanges, { initialValue: '' });
 
@@ -181,7 +189,7 @@ export class AdminPages {
   }
 
   private fillForm(page: AdminPage): void {
-    this.form.reset({ title: page.title, content: page.content });
+    this.form.reset({ title: page.title, content: page.content, description: page.description });
     this.preview.set(false);
     this.saved.set(false);
     this.error.set(null);
@@ -204,7 +212,7 @@ export class AdminPages {
         this.saving.set(false);
         this.pages.update((list) => list.map((p) => (p.slug === updated.slug ? { ...p, ...updated } : p)));
         // Formular mit dem gespeicherten Stand füllen
-        this.form.reset({ title: updated.title, content: updated.content });
+        this.form.reset({ title: updated.title, content: updated.content, description: updated.description });
         this.saved.set(true);
       },
       error: (err) => {

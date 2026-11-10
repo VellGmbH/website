@@ -24,6 +24,7 @@ export function toPage(row) {
     slug: row.slug,
     title: row.title,
     content: row.content,
+    description: row.description ?? '',
     updatedAt: toIso(row.updated_at),
   };
 }
@@ -36,6 +37,8 @@ export function toSiteSettings(rows, avatarRow) {
     name: map.name ?? '',
     tagline: map.tagline ?? '',
     githubUrl: map.githubUrl || null,
+    description: map.description ?? '',
+    keywords: map.keywords ?? '',
     avatarVersion: avatarRow ? toIso(avatarRow.updated_at) : null,
   };
 }

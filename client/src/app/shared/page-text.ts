@@ -45,8 +45,10 @@ export class PageText {
 
   constructor() {
     effect(() => {
-      if (this.setTitle() && this.page.hasValue()) {
-        this.titles.setPageTitle(this.page.value().title);
+      if (this.page.hasValue()) {
+        const page = this.page.value();
+        // auf der Startseite steht im Tab nur der Name, die Beschreibung wird trotzdem gesetzt
+        this.titles.setPageTitle(this.setTitle() ? page.title : undefined, page.description);
       }
     });
   }

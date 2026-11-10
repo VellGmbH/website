@@ -35,6 +35,20 @@ const MAX_BYTES = 2 * 1024 * 1024;
         <app-field-error [control]="form.controls.githubUrl" />
       </p>
 
+      <h3>Suchmaschinen</h3>
+      <p>
+        <label for="description">Beschreibung der Website</label>
+        <textarea id="description" formControlName="description" rows="3" maxlength="200"></textarea>
+        <span class="hint">{{ form.controls.description.value.length }} / 200 Zeichen. Wird genommen, wenn eine Seite keine eigene Beschreibung hat.</span>
+        <app-field-error [control]="form.controls.description" />
+      </p>
+      <p>
+        <label for="keywords">Keywords (mit Komma getrennt)</label>
+        <textarea id="keywords" formControlName="keywords" rows="3" maxlength="500"></textarea>
+        <span class="hint">{{ form.controls.keywords.value.length }} / 500 Zeichen. Am besten 10 bis 15 Begriffe, unter denen man dich finden soll.</span>
+        <app-field-error [control]="form.controls.keywords" />
+      </p>
+
       @if (error()) {
         <p class="error" role="alert">{{ error() }}</p>
       }
@@ -101,6 +115,8 @@ export class Profile {
     name: [this.site.settings().name, [Validators.required, Validators.maxLength(80)]],
     tagline: [this.site.settings().tagline, Validators.maxLength(150)],
     githubUrl: [this.site.settings().githubUrl ?? '', Validators.pattern(URL_PATTERN)],
+    description: [this.site.settings().description, Validators.maxLength(200)],
+    keywords: [this.site.settings().keywords, Validators.maxLength(500)],
   });
 
   protected readonly saving = signal(false);

@@ -8,6 +8,8 @@ const FALLBACK: SiteSettings = {
   name: 'Daniel Shapiro',
   tagline: '',
   githubUrl: null,
+  description: '',
+  keywords: '',
   avatarVersion: null,
 };
 

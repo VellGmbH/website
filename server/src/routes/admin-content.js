@@ -1,8 +1,8 @@
 // Admin Routen für Texte, Profil und Profilbild (werden in admin.js eingebunden)
 //
 // GET    /api/admin/pages         alle Seiten
-// PUT    /api/admin/pages/:slug   Seite speichern { title, content }
-// PUT    /api/admin/settings      { name, tagline, githubUrl }
+// PUT    /api/admin/pages/:slug   Seite speichern { title, content, description }
+// PUT    /api/admin/settings      { name, tagline, githubUrl, description, keywords }
 // PUT    /api/admin/avatar        Profilbild hochladen (max 2 MB)
 // DELETE /api/admin/avatar         wieder Standardbild
 import express from 'express';
@@ -14,14 +14,17 @@ import { defaultPages } from '../db/content-seed.js';
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 
 const pageSchema = {
-  title: rules.requiredString(1, 120),
+  title: rules.requiredString(1, 80), // Seitentitel max 80 Zeichen (SEO)
   content: rules.optionalString(50_000),
+  description: rules.optionalString(200), // meta description max 200 Zeichen
 };
 
 const settingsSchema = {
   name: rules.requiredString(1, 80),
   tagline: rules.optionalString(150),
   githubUrl: rules.optionalUrl,
+  description: rules.optionalString(200),
+  keywords: rules.optionalString(500),
 };
 
 // Bildtyp an den ersten Bytes der Datei erkennen, dem Header kann man nicht trauen
@@ -44,7 +47,9 @@ export function registerContentRoutes(router, db) {
 
   const getPage = db.prepare('SELECT * FROM pages WHERE slug = ?');
   const allPages = db.prepare('SELECT * FROM pages');
-  const updatePage = db.prepare("UPDATE pages SET title = ?, content = ?, updated_at = datetime('now') WHERE slug = ?");
+  const updatePage = db.prepare(
+    "UPDATE pages SET title = ?, content = ?, description = ?, updated_at = datetime('now') WHERE slug = ?",
+  );
 
   router.get('/pages', (_req, res) => {
     const rows = new Map(allPages.all().map((r) => [r.slug, r]));
@@ -57,7 +62,12 @@ export function registerContentRoutes(router, db) {
 
   router.put('/pages/:slug', validateBody(pageSchema), (req, res) => {
     const slug = String(req.params.slug);
-    const result = updatePage.run(req.body.title.trim(), (req.body.content ?? '').trim(), slug);
+    const result = updatePage.run(
+      req.body.title.trim(),
+      (req.body.content ?? '').trim(),
+      (req.body.description ?? '').trim(),
+      slug,
+    );
     if (result.changes === 0) throw new HttpError(404, 'Seite nicht gefunden.');
     res.json(toPage(getPage.get(slug)));
   });
@@ -72,10 +82,13 @@ export function registerContentRoutes(router, db) {
   const getAvatarVersion = db.prepare("SELECT updated_at FROM assets WHERE name = 'avatar'");
 
   router.put('/settings', validateBody(settingsSchema), (req, res) => {
-    const { name, tagline, githubUrl } = req.body;
+    const { name, tagline, githubUrl, description, keywords } = req.body;
     upsertSetting.run('name', name.trim());
     upsertSetting.run('tagline', (tagline ?? '').trim());
     upsertSetting.run('githubUrl', (githubUrl ?? '').trim());
+    // nur speichern wenn mitgeschickt, sonst bleibt der alte Wert
+    if (description !== undefined) upsertSetting.run('description', description.trim());
+    if (keywords !== undefined) upsertSetting.run('keywords', keywords.trim());
     res.json(toSiteSettings(allSettings.all(), getAvatarVersion.get()));
   });
 

@@ -6,6 +6,9 @@ export const defaultSettings = {
   name: 'Daniel Shapiro',
   tagline: 'Informatik-Student · htw saar',
   githubUrl: 'https://github.com/VellGmbH',
+  // für Suchmaschinen (Beschreibung max 200, Keywords max 500 Zeichen)
+  description: 'Persönliche Website von Daniel Shapiro, Informatik-Student an der htw saar: Projekte, Kontakt und ein bisschen über mich.',
+  keywords: 'Daniel Shapiro, Informatik, Student, htw saar, Saarbrücken, Webentwicklung, Angular, Node.js, Projekte, Portfolio',
 };
 
 // die Seiten, in der Reihenfolge wie im Admin Bereich
@@ -14,6 +17,7 @@ export const defaultPages = [
     slug: 'about',
     label: 'Über mich (Startseite)',
     title: 'Über mich',
+    description: 'Über mich: Daniel Shapiro, Informatik-Student an der htw saar, und was ich so programmiere.',
     content: `Hi! 👋
 
 Ich bin Daniel und studiere Informatik an der htw saar. In meiner Freizeit und im Studium baue ich gerne kleine Programme und Webseiten – meistens, weil ich etwas selbst brauche oder einfach ausprobieren will, wie etwas funktioniert.
@@ -26,18 +30,21 @@ Wenn du mir etwas sagen willst, schreib mir einfach über das [Kontaktformular](
     slug: 'projekte',
     label: 'Projekte (Einleitung)',
     title: 'Projekte',
+    description: 'Meine Projekte mit Beschreibung, verwendeten Technologien und Links zum Code.',
     content: '',
   },
   {
     slug: 'kontakt',
     label: 'Kontakt (Text über dem Formular)',
     title: 'Kontakt',
+    description: 'Schreib mir eine Nachricht über das Kontaktformular.',
     content: 'Fragen, Feedback oder einfach Hallo sagen – schreib mir hier.',
   },
   {
     slug: 'impressum',
     label: 'Impressum',
     title: 'Impressum',
+    description: 'Impressum nach § 5 DDG.',
     content: `## Angaben gemäß § 5 DDG
 
 Daniel Shapiro
@@ -56,6 +63,7 @@ Daniel Shapiro (Anschrift wie oben)`,
     slug: 'datenschutz',
     label: 'Datenschutz',
     title: 'Datenschutz',
+    description: 'Datenschutzerklärung: welche Daten diese Seite verarbeitet und warum.',
     content: `Kurz gesagt: Diese Seite sammelt so wenig wie möglich.
 
 ## Verantwortlicher

@@ -12,6 +12,7 @@ import { authRouter } from './routes/auth.js';
 import { adminRouter } from './routes/admin.js';
 import { contentRouter } from './routes/content.js';
 import { createMailOutbox } from './mail/outbox.js';
+import { seoRouter } from './routes/seo.js';
 import { errorHandler, notFoundHandler } from './middleware/errors.js';
 
 export function createApp(db, { rateLimitEnabled = true, staticDir } = {}) {
@@ -67,6 +68,9 @@ export function createApp(db, { rateLimitEnabled = true, staticDir } = {}) {
   app.use('/api/auth', authRouter(db, { rateLimitEnabled }));
   app.use('/api/admin', adminRouter(db));
   app.use('/api', notFoundHandler);
+
+  // robots.txt und sitemap.xml (vor dem Angular Client, sonst landet das bei index.html)
+  app.use(seoRouter(db));
 
   // den gebauten Angular Client auch gleich mit ausliefern
   if (staticDir && existsSync(staticDir)) {

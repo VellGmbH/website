@@ -58,6 +58,7 @@ const SCHEMA = `
     slug        TEXT PRIMARY KEY,
     title       TEXT NOT NULL,
     content     TEXT NOT NULL DEFAULT '',
+    description TEXT NOT NULL DEFAULT '',  -- für <meta name="description"> (max 200 Zeichen)
     updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -76,6 +77,7 @@ const MIGRATIONS = [
   ['admin_users', 'failed_attempts', 'INTEGER NOT NULL DEFAULT 0'],
   ['admin_users', 'locked_until', 'TEXT'],
   ['messages', 'mail_sent', 'INTEGER NOT NULL DEFAULT 0'],
+  ['pages', 'description', "TEXT NOT NULL DEFAULT ''"],
 ];
 
 // Datenbank öffnen bzw. anlegen. Für die Tests geht auch ":memory:"
@@ -102,8 +104,8 @@ function ensureContent(db) {
   const insertSetting = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
   for (const [key, value] of Object.entries(defaultSettings)) insertSetting.run(key, value);
 
-  const insertPage = db.prepare('INSERT OR IGNORE INTO pages (slug, title, content) VALUES (?, ?, ?)');
-  for (const p of defaultPages) insertPage.run(p.slug, p.title, p.content);
+  const insertPage = db.prepare('INSERT OR IGNORE INTO pages (slug, title, content, description) VALUES (?, ?, ?, ?)');
+  for (const p of defaultPages) insertPage.run(p.slug, p.title, p.content, p.description ?? '');
 }
 
 function migrateColumns(db) {
