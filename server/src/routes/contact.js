@@ -4,7 +4,6 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { validateBody, rules } from '../middleware/validate.js';
 import { encrypt } from '../security/crypto.js';
-import { sendNewMessageNotification } from '../mail/mailer.js';
 
 const contactSchema = {
   name: rules.requiredString(2, 100),
@@ -14,7 +13,7 @@ const contactSchema = {
   consent: (v) => (v === true ? null : 'Bitte der Datenschutzerklärung zustimmen.'),
 };
 
-export function contactRouter(db, { rateLimitEnabled = true } = {}) {
+export function contactRouter(db, { rateLimitEnabled = true, outbox } = {}) {
   const router = Router();
 
   // gegen Spam: max 5 Nachrichten pro IP in 15 Minuten
@@ -45,10 +44,10 @@ export function contactRouter(db, { rateLimitEnabled = true } = {}) {
       message: req.body.message.trim(),
     };
 
-    insertStmt.run(encrypt(msg.name), encrypt(msg.email), encrypt(msg.subject), encrypt(msg.message));
+    const result = insertStmt.run(encrypt(msg.name), encrypt(msg.email), encrypt(msg.subject), encrypt(msg.message));
 
-    // nicht auf die Mail warten
-    void sendNewMessageNotification(msg);
+    // Mail verschicken, aber nicht darauf warten
+    void outbox?.send(Number(result.lastInsertRowid));
 
     // ID braucht der Besucher nicht
     res.status(201).json({ ok: true });

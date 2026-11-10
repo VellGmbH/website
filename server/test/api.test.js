@@ -396,3 +396,10 @@ test('Mail: keine Header über Zeilenumbrüche einschleusen', async () => {
   assert.doesNotMatch(mail.replyTo.name, /[\r\n]/);
   assert.equal(cleanHeader('a'.repeat(500)).length, 150);
 });
+
+test('Mail: neue Nachricht ist als "Mail noch offen" markiert', async () => {
+  const res = await anon.request('POST', '/contact', validMessage);
+  assert.equal(res.status, 201);
+  const row = db.prepare('SELECT mail_sent FROM messages ORDER BY id DESC LIMIT 1').get();
+  assert.equal(row.mail_sent, 0, 'Mail ist im Test abgeschaltet, also bleibt sie offen');
+});

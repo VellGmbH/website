@@ -87,24 +87,20 @@ function underHourlyLimit() {
   return sentTimes.length < config.mail.maxPerHour;
 }
 
-const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-// nach einem Fehler noch 2x probieren (nach 10 Sekunden und nach 1 Minute)
-const RETRY_DELAYS = [10_000, 60_000];
-
-// Mail verschicken. Wenn das schiefgeht wird nur geloggt,
-// die Nachricht ist ja schon gespeichert und steht im Admin Bereich
-export async function sendNewMessageNotification(msg, { retryDelays = RETRY_DELAYS } = {}) {
-  if (config.mail.disabled) return;
+// Mail verschicken, gibt true zurück wenn es geklappt hat
+// wenn nicht wird nur geloggt, die Nachricht ist ja gespeichert und outbox.js versucht es später nochmal
+export async function sendNewMessageNotification(msg) {
+  if (config.mail.disabled) return false;
 
   // bei Ethereal ist die Adresse egal
   const to = config.mail.to || (!config.mail.host ? 'test@example.com' : '');
   if (!to) {
     console.warn('[mail] MAIL_TO ist nicht gesetzt – keine Mail verschickt.');
-    return;
+    return false;
   }
   if (!underHourlyLimit()) {
-    console.warn('[mail] Zu viele Mails in der letzten Stunde – Nachricht nur gespeichert.');
-    return;
+    console.warn('[mail] Zu viele Mails in der letzten Stunde – wird später verschickt.');
+    return false;
   }
   sentTimes.push(Date.now());
 
@@ -119,19 +115,16 @@ export async function sendNewMessageNotification(msg, { retryDelays = RETRY_DELA
     },
   };
 
-  for (let attempt = 0; ; attempt++) {
-    try {
-      const transporter = await getTransporter();
-      const info = await transporter.sendMail(mail);
-      const preview = nodemailer.getTestMessageUrl(info);
-      console.log(`[mail] Nachricht weitergeleitet.${preview ? ' Vorschau: ' + preview : ''}`);
-      return;
-    } catch (err) {
-      // nur die Fehlermeldung loggen, keine Daten aus der Nachricht
-      console.error(`[mail] Versand fehlgeschlagen (Versuch ${attempt + 1}): ${err.message}`);
-      if (attempt >= retryDelays.length) return;
-      await wait(retryDelays[attempt]);
-    }
+  try {
+    const transporter = await getTransporter();
+    const info = await transporter.sendMail(mail);
+    const preview = nodemailer.getTestMessageUrl(info);
+    console.log(`[mail] Nachricht weitergeleitet.${preview ? ' Vorschau: ' + preview : ''}`);
+    return true;
+  } catch (err) {
+    // nur die Fehlermeldung loggen, keine Daten aus der Nachricht
+    console.error(`[mail] Versand fehlgeschlagen, wird später nochmal versucht: ${err.message}`);
+    return false;
   }
 }
 

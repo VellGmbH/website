@@ -29,6 +29,10 @@ server.listen(config.port, () => {
   const protocol = useHttps ? 'https' : 'http';
   console.log(`[server] läuft auf ${protocol}://localhost:${config.port}`);
   void checkMailConnection();
+  // offene Mails gleich und dann alle 5 Minuten verschicken
+  void app.locals.outbox.sendPending();
+  const mailTimer = setInterval(() => void app.locals.outbox.sendPending(), 5 * 60 * 1000);
+  mailTimer.unref();
 });
 
 // bei Strg+C sauber beenden

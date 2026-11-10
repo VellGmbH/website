@@ -11,6 +11,7 @@ import { contactRouter } from './routes/contact.js';
 import { authRouter } from './routes/auth.js';
 import { adminRouter } from './routes/admin.js';
 import { contentRouter } from './routes/content.js';
+import { createMailOutbox } from './mail/outbox.js';
 import { errorHandler, notFoundHandler } from './middleware/errors.js';
 
 export function createApp(db, { rateLimitEnabled = true, staticDir } = {}) {
@@ -59,7 +60,10 @@ export function createApp(db, { rateLimitEnabled = true, staticDir } = {}) {
   app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
   app.use('/api/projects', projectsRouter(db));
   app.use('/api', contentRouter(db));
-  app.use('/api/contact', contactRouter(db, { rateLimitEnabled }));
+  // eine Outbox für alles, server.js holt sie sich für die regelmäßigen Versuche
+  const outbox = createMailOutbox(db);
+  app.locals.outbox = outbox;
+  app.use('/api/contact', contactRouter(db, { rateLimitEnabled, outbox }));
   app.use('/api/auth', authRouter(db, { rateLimitEnabled }));
   app.use('/api/admin', adminRouter(db));
   app.use('/api', notFoundHandler);

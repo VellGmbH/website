@@ -32,6 +32,7 @@ const SCHEMA = `
     subject     TEXT    NOT NULL,
     message     TEXT    NOT NULL,
     is_read     INTEGER NOT NULL DEFAULT 0,
+    mail_sent   INTEGER NOT NULL DEFAULT 0,  -- 1 = Mail ist raus
     created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -74,6 +75,7 @@ const MIGRATIONS = [
   ['admin_users', 'token_version', 'INTEGER NOT NULL DEFAULT 0'],
   ['admin_users', 'failed_attempts', 'INTEGER NOT NULL DEFAULT 0'],
   ['admin_users', 'locked_until', 'TEXT'],
+  ['messages', 'mail_sent', 'INTEGER NOT NULL DEFAULT 0'],
 ];
 
 // Datenbank öffnen bzw. anlegen. Für die Tests geht auch ":memory:"
